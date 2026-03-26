@@ -2,16 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "EngifyApp",
+    name: "Engify",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "EngifyApp", targets: ["EngifyApp"])
+        .executable(name: "Engify", targets: ["Engify"])
     ],
     targets: [
         .executableTarget(
-            name: "EngifyApp",
+            name: "Engify",
             path: "Sources"
         )
     ]
