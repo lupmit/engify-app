@@ -40,7 +40,7 @@ struct AIRewriteClient {
                         parts: [GeminiPart(text: buildPrompt(input: input))]
                     )
                 ],
-                generationConfig: GeminiGenerationConfig(temperature: 0.2, maxOutputTokens: 1024)
+                generationConfig: GeminiGenerationConfig(temperature: 0.2, maxOutputTokens: 8192)
             ),
             model: modelName
         )
@@ -89,8 +89,11 @@ struct AIRewriteClient {
         }
 
         let parsed = try JSONDecoder().decode(GeminiGenerateResponse.self, from: data)
-        let output = (parsed.response?.candidates ?? parsed.candidates)?
-            .first?
+        let candidate = (parsed.response?.candidates ?? parsed.candidates)?.first
+        let finishReason = candidate?.finishReason ?? "unknown"
+        EngifyLogger.debug("[Engify][API] Finish reason: \(finishReason)")
+
+        let output = candidate?
             .content?
             .parts?
             .compactMap(\ .text)
@@ -98,11 +101,14 @@ struct AIRewriteClient {
 
         guard let text = output?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else {
-            EngifyLogger.debug("[Engify][API] Unexpected Gemini response format or empty output")
+            EngifyLogger.debug("[Engify][API] Empty output — finishReason: \(finishReason)")
+            let reason = finishReason == "SAFETY"
+                ? "AI declined to process this text (safety filter)."
+                : "AI returned an empty rewrite (finishReason: \(finishReason))."
             throw RewriteError.unknown(NSError(
                 domain: "Engify.API",
                 code: 2003,
-                userInfo: [NSLocalizedDescriptionKey: "AI returned an empty rewrite."]
+                userInfo: [NSLocalizedDescriptionKey: reason]
             ))
         }
 
@@ -185,6 +191,7 @@ private struct GeminiCLIResponseEnvelope: Codable {
 
 private struct GeminiCandidate: Codable {
     let content: GeminiContent?
+    let finishReason: String?
 }
 
 private struct GeminiErrorResponse: Codable {

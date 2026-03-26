@@ -33,9 +33,21 @@ struct TextRewriteCoordinator {
         // Send Cmd+C to copy whatever is selected in the frontmost app.
         EngifyLogger.debug("[Engify][Flow] Sending Cmd+C")
         AccessibilityService.simulateCopy()
-        try? await Task.sleep(nanoseconds: 300_000_000)
 
-        let selected = ClipboardService.readString()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Poll until the clipboard changes (or 1.5 s timeout) to handle apps that update the
+        // clipboard asynchronously (browsers, rich-text editors, apps with IME, etc.).
+        let pollDeadline = Date().addingTimeInterval(1.5)
+        var polledString: String? = nil
+        while Date() < pollDeadline {
+            try? await Task.sleep(nanoseconds: 50_000_000) // 50 ms
+            let current = ClipboardService.readString()
+            if current != beforeCopy {
+                polledString = current
+                break
+            }
+        }
+
+        let selected = (polledString ?? ClipboardService.readString())?.trimmingCharacters(in: .whitespacesAndNewlines)
         EngifyLogger.debug("[Engify][Flow] Clipboard after Cmd+C: \(selected?.prefix(40) ?? "<empty>")")
         guard let text = selected, !text.isEmpty, text != beforeCopy else {
             EngifyLogger.debug("[Engify][Flow] Clipboard unchanged after Cmd+C — nothing selected")
