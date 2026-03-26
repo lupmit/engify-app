@@ -15,6 +15,7 @@ final class AppViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var lastHotkeyFire: Date = .distantPast
     private var isRewriteInFlight = false
+    private var permissionPollingTask: Task<Void, Never>?
 
     init() {
         let client = AIRewriteClient()
@@ -22,21 +23,60 @@ final class AppViewModel: ObservableObject {
 
         hotkeyService.registerDefaultHotkey()
         bindEvents()
-        refreshPermissionStatus()
+        requestPermissionOnLaunchIfNeeded()
     }
 
     func requestAccessibilityPermission() {
         _ = AccessibilityService.requestPermissionPrompt()
+        statusText = "Waiting for Accessibility permission…"
         refreshPermissionStatus()
+        startPermissionPollingIfNeeded()
+    }
+
+    private func requestPermissionOnLaunchIfNeeded() {
+        guard !AccessibilityService.isTrusted() else {
+            refreshPermissionStatus()
+            return
+        }
+
+        _ = AccessibilityService.requestPermissionPrompt()
+        refreshPermissionStatus()
+        startPermissionPollingIfNeeded()
     }
 
     private func refreshPermissionStatus() {
         hasAccessibilityPermission = AccessibilityService.isTrusted()
         if hasAccessibilityPermission {
             statusText = AppViewModel.defaultStatusText
+            stopPermissionPolling()
         } else {
             statusText = "Accessibility not granted. Open menu and grant permission first."
         }
+    }
+
+    private func startPermissionPollingIfNeeded() {
+        guard !hasAccessibilityPermission else { return }
+        guard permissionPollingTask == nil else { return }
+
+        permissionPollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1000_000_000)
+                guard let self else { return }
+
+                await MainActor.run {
+                    self.refreshPermissionStatus()
+                }
+
+                if await MainActor.run(body: { self.hasAccessibilityPermission }) {
+                    return
+                }
+            }
+        }
+    }
+
+    private func stopPermissionPolling() {
+        permissionPollingTask?.cancel()
+        permissionPollingTask = nil
     }
 
     private func bindEvents() {
@@ -58,6 +98,14 @@ final class AppViewModel: ObservableObject {
                 Task { [weak self] in
                     await self?.runRewriteFlow()
                 }
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshPermissionStatus()
+                self?.startPermissionPollingIfNeeded()
             }
             .store(in: &cancellables)
     }
@@ -86,5 +134,9 @@ final class AppViewModel: ObservableObject {
             EngifyLogger.debug("[Engify] Rewrite flow failed: \(error.userFacingMessage)")
             statusText = error.userFacingMessage
         }
+    }
+
+    deinit {
+        permissionPollingTask?.cancel()
     }
 }
