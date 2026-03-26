@@ -1,7 +1,7 @@
 import Foundation
 
 struct AIRewriteClient {
-    private let modelFallbacks = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"]
+    private let modelFallbacks = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"]
     private let codeAssistEndpoint = "https://cloudcode-pa.googleapis.com/v1internal:generateContent"
     private let apiClientHeader = "google-genai-sdk/1.41.0 gl-node/v22.19.0"
 
