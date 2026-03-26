@@ -2,21 +2,12 @@ import Foundation
 
 enum RewriteError: Error {
     case permissionDenied
-    case noSelection
-    case remoteRejected
-    case emptyResult
     case unknown(Error)
 
     var userFacingMessage: String {
         switch self {
         case .permissionDenied:
             return "Accessibility permission required. Open Settings and grant permission."
-        case .noSelection:
-            return "No selected text found. Highlight text and try again."
-        case .remoteRejected:
-            return "AI API rejected the request."
-        case .emptyResult:
-            return "AI returned an empty rewrite."
         case .unknown(let error):
             return "Unexpected error: \(error.localizedDescription)"
         }
@@ -49,7 +40,7 @@ struct TextRewriteCoordinator {
         guard let text = selected, !text.isEmpty, text != beforeCopy else {
             print("[Engify][Flow] Clipboard unchanged after Cmd+C — nothing selected")
             ClipboardService.restore(snapshot)
-            return .failure(.noSelection)
+            return .success("")
         }
         print("[Engify][Flow] Got selection (length: \(text.count)): \(text.prefix(80))")
 

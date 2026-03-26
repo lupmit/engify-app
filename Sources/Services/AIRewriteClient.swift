@@ -24,7 +24,11 @@ struct AIRewriteClient {
 
         guard let http = response as? HTTPURLResponse else {
             print("[Engify][API] Invalid HTTP response")
-            throw RewriteError.remoteRejected
+            throw RewriteError.unknown(NSError(
+                domain: "Engify.API",
+                code: 2001,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid HTTP response from AI service."]
+            ))
         }
 
         print("[Engify][API] HTTP status: \(http.statusCode)")
@@ -33,14 +37,22 @@ struct AIRewriteClient {
 
         if !http.isOK {
             print("[Engify][API] Request failed with response error: \(parsed.error ?? "unknown")")
-            throw RewriteError.remoteRejected
+            throw RewriteError.unknown(NSError(
+                domain: "Engify.API",
+                code: 2002,
+                userInfo: [NSLocalizedDescriptionKey: parsed.error ?? "AI API rejected the request."]
+            ))
         }
 
         guard parsed.success,
               let text = parsed.enhancedText?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else {
             print("[Engify][API] Unexpected response format or empty enhancedText")
-            throw RewriteError.emptyResult
+            throw RewriteError.unknown(NSError(
+                domain: "Engify.API",
+                code: 2003,
+                userInfo: [NSLocalizedDescriptionKey: "AI returned an empty rewrite."]
+            ))
         }
 
         print("[Engify][API] Success, enhanced text length: \(text.count)")

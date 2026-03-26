@@ -20,12 +20,10 @@ struct EngifyApp: App {
 
                 Divider()
 
-                Button("Request Accessibility Permission") {
-                    viewModel.requestAccessibilityPermission()
-                }
-
-                Button("Open Settings") {
-                    viewModel.openSettings()
+                if !viewModel.hasAccessibilityPermission {
+                    Button("Request Accessibility Permission") {
+                        viewModel.requestAccessibilityPermission()
+                    }
                 }
 
                 Button("Quit") {
@@ -33,7 +31,7 @@ struct EngifyApp: App {
                 }
             }
             .padding(12)
-            .frame(width: 320)
+            .frame(width: 280)
         }
     }
 }
