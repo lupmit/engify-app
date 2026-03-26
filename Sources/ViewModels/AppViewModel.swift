@@ -26,6 +26,7 @@ final class AppViewModel: ObservableObject {
         bindEvents()
         requestPermissionOnLaunchIfNeeded()
         refreshLoginStatus()
+        refreshIdleStatusText()
     }
 
     func login() {
