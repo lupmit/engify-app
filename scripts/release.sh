@@ -114,6 +114,7 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 PLIST_PATH="$CONTENTS_DIR/Info.plist"
 DMG_PATH="$OUTPUT_DIR/${APP_NAME}.dmg"
+DMG_STAGING_DIR="$OUTPUT_DIR/.dmg-staging"
 
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$BINARY_PATH" "$MACOS_DIR/$BINARY_NAME"
@@ -155,8 +156,12 @@ else
   codesign --force --deep --sign - "$APP_BUNDLE"
 fi
 
+mkdir -p "$DMG_STAGING_DIR"
+ditto "$APP_BUNDLE" "$DMG_STAGING_DIR/${APP_NAME}.app"
+ln -sfn /Applications "$DMG_STAGING_DIR/Applications"
+
 echo "[release] Creating DMG: $DMG_PATH"
-hdiutil create -volname "$APP_NAME" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_PATH"
+hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_STAGING_DIR" -ov -format UDZO "$DMG_PATH"
 
 if [[ -n "$NOTARY_PROFILE" ]]; then
   echo "[release] Notarizing DMG with profile: $NOTARY_PROFILE"

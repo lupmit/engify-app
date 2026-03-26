@@ -38,6 +38,8 @@ swift build -c release
 
 Use `scripts/release.sh` to package the app into `.app` and `.dmg`.
 
+The generated DMG includes `Engify.app` and an `Applications` shortcut so users can drag-and-drop install in Finder.
+
 Show all options:
 
 ```bash
