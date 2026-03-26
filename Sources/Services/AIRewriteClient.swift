@@ -4,8 +4,8 @@ struct AIRewriteClient {
     private let workerURL = "https://engify.lupmit.workers.dev"
 
     func rewrite(_ input: String, context: String? = nil, mode: String? = "polish") async throws -> String {
-        print("[Engify][API] Preparing request")
-        print("[Engify][API] Input length: \(input.count)")
+        EngifyLogger.debug("[Engify][API] Preparing request")
+        EngifyLogger.debug("[Engify][API] Input length: \(input.count)")
 
         guard let url = URL(string: workerURL) else {
             throw RewriteError.unknown(NSError(domain: "Engify", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid endpoint URL"]))
@@ -19,11 +19,11 @@ struct AIRewriteClient {
         let body = WorkerRequest(text: input, context: context, mode: mode)
         request.httpBody = try JSONEncoder().encode(body)
 
-        print("[Engify][API] Sending POST to \(workerURL)")
+        EngifyLogger.debug("[Engify][API] Sending POST to \(workerURL)")
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {
-            print("[Engify][API] Invalid HTTP response")
+            EngifyLogger.debug("[Engify][API] Invalid HTTP response")
             throw RewriteError.unknown(NSError(
                 domain: "Engify.API",
                 code: 2001,
@@ -31,12 +31,12 @@ struct AIRewriteClient {
             ))
         }
 
-        print("[Engify][API] HTTP status: \(http.statusCode)")
+        EngifyLogger.debug("[Engify][API] HTTP status: \(http.statusCode)")
 
         let parsed = try JSONDecoder().decode(WorkerResponse.self, from: data)
 
         if !http.isOK {
-            print("[Engify][API] Request failed with response error: \(parsed.error ?? "unknown")")
+            EngifyLogger.debug("[Engify][API] Request failed with response error: \(parsed.error ?? "unknown")")
             throw RewriteError.unknown(NSError(
                 domain: "Engify.API",
                 code: 2002,
@@ -47,7 +47,7 @@ struct AIRewriteClient {
         guard parsed.success,
               let text = parsed.enhancedText?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else {
-            print("[Engify][API] Unexpected response format or empty enhancedText")
+            EngifyLogger.debug("[Engify][API] Unexpected response format or empty enhancedText")
             throw RewriteError.unknown(NSError(
                 domain: "Engify.API",
                 code: 2003,
@@ -55,7 +55,7 @@ struct AIRewriteClient {
             ))
         }
 
-        print("[Engify][API] Success, enhanced text length: \(text.count)")
+        EngifyLogger.debug("[Engify][API] Success, enhanced text length: \(text.count)")
         return text
     }
 }

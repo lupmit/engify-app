@@ -57,7 +57,7 @@ final class AppViewModel: ObservableObject {
     }
 
     private func runRewriteFlow() async {
-        print("[Engify] Hotkey pressed, starting rewrite flow")
+        EngifyLogger.debug("[Engify] Hotkey pressed, starting rewrite flow")
         statusText = "Processing…"
         StatusHUD.shared.showLoading()
 
@@ -66,11 +66,11 @@ final class AppViewModel: ObservableObject {
 
         switch result {
         case .success(let updated):
-            print("[Engify] Rewrite flow succeeded")
+            EngifyLogger.debug("[Engify] Rewrite flow succeeded")
             _ = updated
             statusText = AppViewModel.defaultStatusText
         case .failure(let error):
-            print("[Engify] Rewrite flow failed: \(error.userFacingMessage)")
+            EngifyLogger.debug("[Engify] Rewrite flow failed: \(error.userFacingMessage)")
             statusText = error.userFacingMessage
         }
     }
