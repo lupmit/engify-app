@@ -1,0 +1,41 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+*.resolved
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build artifacts
+*.o
+*.a
+*.dylib
+*.dSYM/
+
+# Environment / secrets
+.env
+.env.local
+secrets.plist
