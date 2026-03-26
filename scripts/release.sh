@@ -170,6 +170,11 @@ if [[ -n "$NOTARY_PROFILE" ]]; then
   xcrun stapler staple "$DMG_PATH"
 fi
 
+ZIP_PATH="$OUTPUT_DIR/${APP_NAME}.zip"
+echo "[release] Creating ZIP: $ZIP_PATH"
+ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ZIP_PATH"
+
 echo "[release] Done"
 echo "  App: $APP_BUNDLE"
 echo "  DMG: $DMG_PATH"
+echo "  ZIP: $ZIP_PATH"

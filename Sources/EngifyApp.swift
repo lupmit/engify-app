@@ -41,12 +41,47 @@ struct Engify: App {
                     }
                 }
 
+                Divider()
+
+                updateView
+
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
             }
             .padding(12)
             .frame(width: 280)
+        }
+    }
+
+    @ViewBuilder
+    private var updateView: some View {
+        switch viewModel.updateState {
+        case .idle:
+            Button("Check for Updates") {
+                Task { await viewModel.checkForUpdates() }
+            }
+        case .checking:
+            Text("Checking for updates…")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .available(let version, let url):
+            Button("⬆ Update to v\(version)") {
+                viewModel.installUpdate(from: url)
+            }
+        case .downloading:
+            Text("Downloading update…")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .error:
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Update check failed")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Retry") {
+                    Task { await viewModel.checkForUpdates() }
+                }
+            }
         }
     }
 }

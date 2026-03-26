@@ -10,6 +10,7 @@ final class AppViewModel: ObservableObject {
     @Published var hasAccessibilityPermission: Bool = false
     @Published var isLoggedIn: Bool = false
     @Published var loggedInEmail: String = ""
+    @Published var updateState: UpdateState = .idle
 
     private let coordinator: TextRewriteCoordinator
     private let hotkeyService = GlobalHotkeyService.shared
@@ -27,6 +28,7 @@ final class AppViewModel: ObservableObject {
         requestPermissionOnLaunchIfNeeded()
         refreshLoginStatus()
         refreshIdleStatusText()
+        Task { await checkForUpdates() }
     }
 
     func login() {
@@ -50,6 +52,34 @@ final class AppViewModel: ObservableObject {
         OAuthService.shared.clearStoredToken()
         refreshLoginStatus()
         refreshIdleStatusText()
+    }
+
+    func checkForUpdates() async {
+        guard updateState != .checking else { return }
+        updateState = .checking
+        do {
+            if let info = try await UpdateService.checkForUpdate() {
+                updateState = .available(info.latestVersion, info.downloadURL)
+            } else {
+                updateState = .idle
+            }
+        } catch {
+            EngifyLogger.debug("[Engify][Update] Check failed: \(error)")
+            updateState = .error(error.localizedDescription)
+        }
+    }
+
+    func installUpdate(from url: URL) {
+        guard updateState != .downloading else { return }
+        updateState = .downloading
+        Task {
+            do {
+                try await UpdateService.downloadAndInstall(from: url)
+            } catch {
+                EngifyLogger.debug("[Engify][Update] Install failed: \(error)")
+                await MainActor.run { self.updateState = .error(error.localizedDescription) }
+            }
+        }
     }
 
     private func refreshLoginStatus() {
@@ -191,4 +221,12 @@ final class AppViewModel: ObservableObject {
     deinit {
         permissionPollingTask?.cancel()
     }
+}
+
+enum UpdateState: Equatable {
+    case idle
+    case checking
+    case available(String, URL)
+    case downloading
+    case error(String)
 }
