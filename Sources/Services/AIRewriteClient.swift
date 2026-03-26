@@ -8,7 +8,7 @@ struct AIRewriteClient {
         print("[Engify][API] Input length: \(input.count)")
 
         guard let url = URL(string: workerURL) else {
-            throw RewriteError.invalidEndpoint
+            throw RewriteError.unknown(NSError(domain: "Engify", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid endpoint URL"]))
         }
 
         var request = URLRequest(url: url)

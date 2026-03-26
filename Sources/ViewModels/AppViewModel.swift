@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 final class AppViewModel: ObservableObject {
     @Published var statusText: String = "Ready. Highlight text anywhere and press Control+Shift+E."
-    @Published var hotkeyHint: String = "Control+Shift+E"
+    @Published var hotkeyHint: String = "Command+E"
 
     private let coordinator: TextRewriteCoordinator
     private let hotkeyService = GlobalHotkeyService.shared

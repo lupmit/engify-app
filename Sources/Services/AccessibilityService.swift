@@ -1,4 +1,4 @@
-import ApplicationServices
+import AppKit
 import CoreGraphics
 import Foundation
 
@@ -14,16 +14,19 @@ enum AccessibilityService {
     }
 
     static func simulateCopy() {
+        print("[Engify][AX] Sending Cmd+C (keyCode 8)")
         sendKeyboardShortcut(keyCode: 8, flags: .maskCommand)
     }
 
     static func simulatePaste() {
+        print("[Engify][AX] Sending Cmd+V (keyCode 9)")
         sendKeyboardShortcut(keyCode: 9, flags: .maskCommand)
     }
 
     private static func sendKeyboardShortcut(keyCode: CGKeyCode, flags: CGEventFlags) {
         guard let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) else {
+            print("[Engify][AX] Failed to create CGEvent for keyCode \(keyCode)")
             return
         }
 
@@ -34,3 +37,4 @@ enum AccessibilityService {
         keyUp.post(tap: .cghidEventTap)
     }
 }
+

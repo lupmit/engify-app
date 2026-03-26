@@ -3,7 +3,6 @@ import Foundation
 enum RewriteError: Error {
     case permissionDenied
     case noSelection
-    case invalidEndpoint
     case remoteRejected
     case emptyResult
     case unknown(Error)
@@ -11,11 +10,9 @@ enum RewriteError: Error {
     var userFacingMessage: String {
         switch self {
         case .permissionDenied:
-            return "Accessibility permission required to read/replace selected text."
+            return "Accessibility permission required. Open Settings and grant permission."
         case .noSelection:
             return "No selected text found. Highlight text and try again."
-        case .invalidEndpoint:
-            return "Invalid AI endpoint URL."
         case .remoteRejected:
             return "AI API rejected the request."
         case .emptyResult:
@@ -35,45 +32,42 @@ struct TextRewriteCoordinator {
             return .failure(.permissionDenied)
         }
 
-        print("[Engify][Flow] Capturing current clipboard snapshot")
+        print("[Engify][Flow] Hotkey fired — starting rewrite flow")
+
+        // Snapshot clipboard so we can restore it after paste.
         let snapshot = ClipboardService.captureGeneralPasteboard()
+        let beforeCopy = ClipboardService.readString()
+        print("[Engify][Flow] Clipboard snapshot taken (before: \(beforeCopy?.prefix(40) ?? "<empty>"))")
 
-        print("[Engify][Flow] Sending copy shortcut")
+        // Send Cmd+C to copy whatever is selected in the frontmost app.
+        print("[Engify][Flow] Sending Cmd+C")
         AccessibilityService.simulateCopy()
-        try? await Task.sleep(nanoseconds: 180_000_000)
+        try? await Task.sleep(nanoseconds: 300_000_000)
 
-        guard let selectedText = ClipboardService.readString()?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !selectedText.isEmpty else {
-            print("[Engify][Flow] Failed to capture selected text from clipboard")
+        let selected = ClipboardService.readString()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        print("[Engify][Flow] Clipboard after Cmd+C: \(selected?.prefix(40) ?? "<empty>")")
+        guard let text = selected, !text.isEmpty, text != beforeCopy else {
+            print("[Engify][Flow] Clipboard unchanged after Cmd+C — nothing selected")
             ClipboardService.restore(snapshot)
             return .failure(.noSelection)
         }
-
-        print("[Engify][Flow] Selected text captured (length: \(selectedText.count))")
-        print("[Engify][Flow] Selected preview: \(String(selectedText.prefix(120)))")
+        print("[Engify][Flow] Got selection (length: \(text.count)): \(text.prefix(80))")
 
         do {
-            let rewritten = try await client.rewrite(selectedText)
-            print("[Engify][Flow] API returned rewritten text (length: \(rewritten.count))")
+            print("[Engify][Flow] Calling AI API...")
+            let rewritten = try await client.rewrite(text)
+            print("[Engify][Flow] API response (length: \(rewritten.count)): \(rewritten.prefix(80))")
             ClipboardService.writeString(rewritten)
-
-            print("[Engify][Flow] Sending paste shortcut")
+            print("[Engify][Flow] Sending Cmd+V")
             AccessibilityService.simulatePaste()
-            try? await Task.sleep(nanoseconds: 120_000_000)
-            print("[Engify][Flow] Paste shortcut sent")
-
+            try? await Task.sleep(nanoseconds: 150_000_000)
             ClipboardService.restore(snapshot)
-            print("[Engify][Flow] Clipboard restored, flow complete")
+            print("[Engify][Flow] Done — clipboard restored")
             return .success(rewritten)
         } catch {
-            print("[Engify][Flow] Error during rewrite: \(error.localizedDescription)")
+            print("[Engify][Flow] Error: \(error)")
             ClipboardService.restore(snapshot)
-
-            if let rewriteError = error as? RewriteError {
-                return .failure(rewriteError)
-            }
-
+            if let e = error as? RewriteError { return .failure(e) }
             return .failure(.unknown(error))
         }
     }

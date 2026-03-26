@@ -4,7 +4,7 @@ import Foundation
 final class GlobalHotkeyService {
     static let shared = GlobalHotkeyService()
 
-    private var hotKeyRef: EventHotKeyRef?
+    private var hotKeyRefs: [EventHotKeyRef] = []
     private var eventHandler: EventHandlerRef?
 
     private init() {}
@@ -12,21 +12,22 @@ final class GlobalHotkeyService {
     func registerDefaultHotkey() {
         unregister()
 
-        let hotkeyID = EventHotKeyID(signature: OSType(0x454E4746), id: 1) // ENGF
-        let modifiers = UInt32(controlKey | shiftKey)
+        // Register two hotkeys with separate IDs:
+        //   id: 1 → Command+E
+        //   id: 2 → Shift+Command+E
+        let hotkeys: [(id: UInt32, modifiers: UInt32)] = [
+            (1, UInt32(cmdKey)),
+            (2, UInt32(cmdKey | shiftKey)),
+        ]
         let keyCode: UInt32 = 14 // E key
 
-        let status = RegisterEventHotKey(
-            keyCode,
-            modifiers,
-            hotkeyID,
-            GetApplicationEventTarget(),
-            0,
-            &hotKeyRef
-        )
-
-        guard status == noErr else {
-            return
+        for hotkey in hotkeys {
+            var ref: EventHotKeyRef?
+            let hotkeyID = EventHotKeyID(signature: OSType(0x454E4746), id: hotkey.id)
+            let status = RegisterEventHotKey(keyCode, hotkey.modifiers, hotkeyID, GetApplicationEventTarget(), 0, &ref)
+            if status == noErr, let ref {
+                hotKeyRefs.append(ref)
+            }
         }
 
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
@@ -58,10 +59,8 @@ final class GlobalHotkeyService {
     }
 
     func unregister() {
-        if let hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
-        }
+        for ref in hotKeyRefs { UnregisterEventHotKey(ref) }
+        hotKeyRefs.removeAll()
 
         if let eventHandler {
             RemoveEventHandler(eventHandler)
