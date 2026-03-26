@@ -9,6 +9,8 @@ final class AppViewModel: ObservableObject {
     @Published var statusText: String = AppViewModel.defaultStatusText
     @Published var hasAccessibilityPermission: Bool = false
     @Published var hotkeyHint: String = "Command+E"
+    @Published var isLoggedIn: Bool = false
+    @Published var loggedInEmail: String = ""
 
     private let coordinator: TextRewriteCoordinator
     private let hotkeyService = GlobalHotkeyService.shared
@@ -24,6 +26,37 @@ final class AppViewModel: ObservableObject {
         hotkeyService.registerDefaultHotkey()
         bindEvents()
         requestPermissionOnLaunchIfNeeded()
+        refreshLoginStatus()
+    }
+
+    func login() {
+        Task { [weak self] in
+            do {
+                _ = try await OAuthService.shared.getValidToken()
+                await MainActor.run {
+                    self?.refreshLoginStatus()
+                }
+            } catch {
+                await MainActor.run {
+                    self?.refreshLoginStatus()
+                }
+            }
+        }
+    }
+
+    func logout() {
+        OAuthService.shared.clearStoredToken()
+        refreshLoginStatus()
+    }
+
+    private func refreshLoginStatus() {
+        loggedInEmail = OAuthService.shared.loadStoredEmail() ?? ""
+        isLoggedIn = !loggedInEmail.isEmpty
+        if AccessibilityService.isTrusted() {
+            statusText = isLoggedIn
+                ? AppViewModel.defaultStatusText
+                : AppViewModel.defaultStatusText + "\n\nPlease login first."
+        }
     }
 
     func requestAccessibilityPermission() {
@@ -106,12 +139,17 @@ final class AppViewModel: ObservableObject {
             .sink { [weak self] _ in
                 self?.refreshPermissionStatus()
                 self?.startPermissionPollingIfNeeded()
+                self?.refreshLoginStatus()
             }
             .store(in: &cancellables)
     }
 
     private func runRewriteFlow() async {
         guard !isRewriteInFlight else { return }
+        guard isLoggedIn else {
+            statusText = "Please login first."
+            return
+        }
         isRewriteInFlight = true
 
         EngifyLogger.debug("[Engify] Hotkey pressed, starting rewrite flow")

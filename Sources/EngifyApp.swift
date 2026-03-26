@@ -20,6 +20,21 @@ struct Engify: App {
 
                 Divider()
 
+                if viewModel.isLoggedIn {
+                    Text(viewModel.loggedInEmail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Logout") {
+                        viewModel.logout()
+                    }
+                } else {
+                    Button("Login") {
+                        viewModel.login()
+                    }
+                }
+
+                Divider()
+
                 if !viewModel.hasAccessibilityPermission {
                     Button("Request Accessibility Permission") {
                         viewModel.requestAccessibilityPermission()
