@@ -8,7 +8,6 @@ final class AppViewModel: ObservableObject {
 
     @Published var statusText: String = AppViewModel.defaultStatusText
     @Published var hasAccessibilityPermission: Bool = false
-    @Published var hotkeyHint: String = "Command+E"
     @Published var isLoggedIn: Bool = false
     @Published var loggedInEmail: String = ""
 
@@ -35,10 +34,12 @@ final class AppViewModel: ObservableObject {
                 _ = try await OAuthService.shared.getValidToken()
                 await MainActor.run {
                     self?.refreshLoginStatus()
+                    self?.refreshIdleStatusText()
                 }
             } catch {
                 await MainActor.run {
                     self?.refreshLoginStatus()
+                    self?.refreshIdleStatusText()
                 }
             }
         }
@@ -47,16 +48,26 @@ final class AppViewModel: ObservableObject {
     func logout() {
         OAuthService.shared.clearStoredToken()
         refreshLoginStatus()
+        refreshIdleStatusText()
     }
 
     private func refreshLoginStatus() {
         loggedInEmail = OAuthService.shared.loadStoredEmail() ?? ""
         isLoggedIn = !loggedInEmail.isEmpty
-        if AccessibilityService.isTrusted() {
-            statusText = isLoggedIn
-                ? AppViewModel.defaultStatusText
-                : AppViewModel.defaultStatusText + "\n\nPlease login first."
-        }
+    }
+
+    /// Recomputes the "idle" status text based on current permission + login state.
+    /// Only overwrites statusText if it's currently showing an idle/default message.
+    private func refreshIdleStatusText() {
+        guard AccessibilityService.isTrusted() else { return }
+        let idleMessages: [String] = [
+            AppViewModel.defaultStatusText,
+            AppViewModel.defaultStatusText + "\n\nPlease login first.",
+        ]
+        guard idleMessages.contains(statusText) else { return }
+        statusText = isLoggedIn
+            ? AppViewModel.defaultStatusText
+            : AppViewModel.defaultStatusText + "\n\nPlease login first."
     }
 
     func requestAccessibilityPermission() {
@@ -80,7 +91,6 @@ final class AppViewModel: ObservableObject {
     private func refreshPermissionStatus() {
         hasAccessibilityPermission = AccessibilityService.isTrusted()
         if hasAccessibilityPermission {
-            statusText = AppViewModel.defaultStatusText
             stopPermissionPolling()
         } else {
             statusText = "Accessibility not granted. Open menu and grant permission first."
@@ -98,6 +108,8 @@ final class AppViewModel: ObservableObject {
 
                 await MainActor.run {
                     self.refreshPermissionStatus()
+                    self.refreshLoginStatus()
+                    self.refreshIdleStatusText()
                 }
 
                 if await MainActor.run(body: { self.hasAccessibilityPermission }) {
@@ -140,6 +152,7 @@ final class AppViewModel: ObservableObject {
                 self?.refreshPermissionStatus()
                 self?.startPermissionPollingIfNeeded()
                 self?.refreshLoginStatus()
+                self?.refreshIdleStatusText()
             }
             .store(in: &cancellables)
     }

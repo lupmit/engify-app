@@ -5,11 +5,11 @@ struct AIRewriteClient {
     private let codeAssistEndpoint = "https://cloudcode-pa.googleapis.com/v1internal:generateContent"
     private let apiClientHeader = "google-genai-sdk/1.41.0 gl-node/v22.19.0"
 
-    func rewrite(_ input: String, context: String? = nil, mode: String? = "polish") async throws -> String {
-        try await rewrite(input, context: context, mode: mode, allowReauthRetry: true, modelIndex: 0)
+    func rewrite(_ input: String) async throws -> String {
+        try await rewrite(input, allowReauthRetry: true, modelIndex: 0)
     }
 
-    private func rewrite(_ input: String, context: String?, mode: String?, allowReauthRetry: Bool, modelIndex: Int) async throws -> String {
+    private func rewrite(_ input: String, allowReauthRetry: Bool, modelIndex: Int) async throws -> String {
         EngifyLogger.debug("[Engify][API] Preparing request")
         EngifyLogger.debug("[Engify][API] Input length: \(input.count)")
 
@@ -37,7 +37,7 @@ struct AIRewriteClient {
                 contents: [
                     GeminiContent(
                         role: "user",
-                        parts: [GeminiPart(text: buildPrompt(input: input, context: context, mode: mode))]
+                        parts: [GeminiPart(text: buildPrompt(input: input))]
                     )
                 ],
                 generationConfig: GeminiGenerationConfig(temperature: 0.2, maxOutputTokens: 1024)
@@ -70,7 +70,7 @@ struct AIRewriteClient {
                resolvedModelIndex + 1 < modelFallbacks.count {
                 let nextModel = modelFallbacks[resolvedModelIndex + 1]
                 EngifyLogger.debug("[Engify][API] Capacity exhausted for \(modelName), retrying with \(nextModel)")
-                return try await rewrite(input, context: context, mode: mode, allowReauthRetry: allowReauthRetry, modelIndex: resolvedModelIndex + 1)
+                return try await rewrite(input, allowReauthRetry: allowReauthRetry, modelIndex: resolvedModelIndex + 1)
             }
 
             if http.statusCode == 403,
@@ -78,7 +78,7 @@ struct AIRewriteClient {
                message.localizedCaseInsensitiveContains("insufficient authentication scopes") {
                 EngifyLogger.debug("[Engify][API] Token missing required scopes, forcing re-auth")
                 OAuthService.shared.clearStoredToken()
-                return try await rewrite(input, context: context, mode: mode, allowReauthRetry: false, modelIndex: resolvedModelIndex)
+                return try await rewrite(input, allowReauthRetry: false, modelIndex: resolvedModelIndex)
             }
 
             throw RewriteError.unknown(NSError(
@@ -114,17 +114,14 @@ struct AIRewriteClient {
         "GeminiCLI/0.31.0/\(modelName) (darwin; arm64)"
     }
 
-    private func buildPrompt(input: String, context: String?, mode: String?) -> String {
-        let selectedMode = mode ?? "polish"
-        let contextBlock = (context?.isEmpty == false) ? "Context:\n\(context!)\n\n" : ""
-
+    private func buildPrompt(input: String) -> String {
         return """
         You are an expert English writing assistant.
-        Rewrite the text below according to mode "\(selectedMode)".
+        Rewrite the text below according to mode "polish".
         Keep original meaning and key facts.
         Return only the rewritten text with no explanation.
 
-        \(contextBlock)Input:
+        Input:
         \(input)
         """
     }

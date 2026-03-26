@@ -38,14 +38,6 @@ final class OAuthService {
 
     private init() {}
 
-    func isLoggedIn() -> Bool {
-        loadToken() != nil
-    }
-
-    func currentUserEmail() -> String? {
-        loadToken()?.email
-    }
-
     private func startLoginInBrowser() throws {
         let state = UUID().uuidString
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
