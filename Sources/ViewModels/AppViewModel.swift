@@ -12,6 +12,10 @@ final class AppViewModel: ObservableObject {
     @Published var loggedInEmail: String = ""
     @Published var updateState: UpdateState = .idle
 
+    var currentVersion: String {
+        UpdateService.currentVersion
+    }
+
     private let coordinator: TextRewriteCoordinator
     private let hotkeyService = GlobalHotkeyService.shared
     private var cancellables = Set<AnyCancellable>()
@@ -52,6 +56,16 @@ final class AppViewModel: ObservableObject {
         OAuthService.shared.clearStoredToken()
         refreshLoginStatus()
         refreshIdleStatusText()
+    }
+
+    func showAboutPanel() {
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? currentVersion
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.orderFrontStandardAboutPanel(options: [
+            .applicationName: "Engify",
+            .applicationVersion: currentVersion,
+            .version: "Build \(build)",
+        ])
     }
 
     func checkForUpdates() async {

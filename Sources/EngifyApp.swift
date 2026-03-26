@@ -45,6 +45,10 @@ struct Engify: App {
 
                 updateView
 
+                Button("About") {
+                    viewModel.showAboutPanel()
+                }
+
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
