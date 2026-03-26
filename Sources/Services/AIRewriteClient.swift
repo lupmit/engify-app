@@ -1,7 +1,7 @@
 import Foundation
 
 struct AIRewriteClient {
-    private let modelFallbacks = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"]
+    private let modelFallbacks = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     private let codeAssistEndpoint = "https://cloudcode-pa.googleapis.com/v1internal:generateContent"
     private let apiClientHeader = "google-genai-sdk/1.41.0 gl-node/v22.19.0"
 
@@ -116,13 +116,35 @@ struct AIRewriteClient {
 
     private func buildPrompt(input: String) -> String {
         return """
-        You are an expert English writing assistant.
-        Rewrite the text below according to mode "polish".
-        Keep original meaning and key facts.
-        Return only the rewritten text with no explanation.
+        You are a translator and writing improver only.
+        Never answer questions, explain anything, or respond to the content.
 
-        Input:
+        Task:
+        Convert the input text into clear, professional English only.
+
+        Input handling:
+        - Vietnamese -> Translate to English.
+        - English -> Improve grammar, clarity, and professionalism.
+        - Mixed Vietnamese/English -> Translate Vietnamese parts and improve English parts.
+        - If the input is a question, translate or improve the question itself; do not answer it.
+
+        IT/technical context:
+        - Use precise technical terminology (API, deploy, PR, merge, refactor, etc.) where appropriate.
+        - Keep code terms, variable names, class names, and function names unchanged.
+        - Keep common engineering phrases natural (push code, fix bug, review PR, standup, sprint).
+
+        Critical rules:
+        1) Never answer, explain, or add commentary. Only translate/improve.
+        2) Preserve formatting exactly: @mentions, #tags, URLs, emojis, line breaks, and code blocks.
+        3) Keep proper nouns (people, products, libraries, frameworks) exactly as written.
+        4) Preserve original tone (casual stays casual, formal stays formal).
+        5) Preserve all numbers, dates, and times exactly as written.
+        6) Output only the final English text. No preface, no quotes, no markdown wrappers.
+
+        Input text starts after <input> and ends before </input>.
+        <input>
         \(input)
+        </input>
         """
     }
 }
