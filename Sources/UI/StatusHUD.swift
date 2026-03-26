@@ -6,6 +6,7 @@ final class StatusHUD {
     static let shared = StatusHUD()
 
     private var window: NSPanel?
+    private var spinnerView: RingSpinnerView?
     private var dismissTask: Task<Void, Never>?
 
     private init() {}
@@ -32,10 +33,14 @@ final class StatusHUD {
         guard let panel = window else { return }
 
         let size: CGFloat = 14
-        let spinner = RingSpinnerView(frame: NSRect(x: 0, y: 0, width: size, height: size))
-        spinner.startAnimating()
+        if spinnerView == nil {
+            spinnerView = RingSpinnerView(frame: NSRect(x: 0, y: 0, width: size, height: size))
+        }
 
-        panel.contentView = spinner
+        guard let spinnerView else { return }
+        spinnerView.startAnimating()
+
+        panel.contentView = spinnerView
         panel.setContentSize(NSSize(width: size, height: size))
 
         // Position just above mouse cursor

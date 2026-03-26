@@ -14,6 +14,7 @@ final class AppViewModel: ObservableObject {
     private let hotkeyService = GlobalHotkeyService.shared
     private var cancellables = Set<AnyCancellable>()
     private var lastHotkeyFire: Date = .distantPast
+    private var isRewriteInFlight = false
 
     init() {
         let client = AIRewriteClient()
@@ -43,6 +44,11 @@ final class AppViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
+                if self.isRewriteInFlight {
+                    EngifyLogger.debug("[Engify] Ignoring hotkey because rewrite is already in flight")
+                    return
+                }
+
                 let now = Date()
                 if now.timeIntervalSince(self.lastHotkeyFire) < 0.8 {
                     return
@@ -57,12 +63,19 @@ final class AppViewModel: ObservableObject {
     }
 
     private func runRewriteFlow() async {
+        guard !isRewriteInFlight else { return }
+        isRewriteInFlight = true
+
         EngifyLogger.debug("[Engify] Hotkey pressed, starting rewrite flow")
         statusText = "Processing…"
         StatusHUD.shared.showLoading()
 
+        defer {
+            isRewriteInFlight = false
+            StatusHUD.shared.hide()
+        }
+
         let result = await coordinator.rewriteCurrentlySelectedText()
-        StatusHUD.shared.hide()
 
         switch result {
         case .success(let updated):

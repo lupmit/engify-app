@@ -2,39 +2,17 @@ import AppKit
 import Foundation
 
 struct ClipboardSnapshot {
-    let items: [[NSPasteboard.PasteboardType: Data]]
+    let string: String?
 }
 
 enum ClipboardService {
     static func captureGeneralPasteboard() -> ClipboardSnapshot {
-        let pasteboard = NSPasteboard.general
-        let serialized = (pasteboard.pasteboardItems ?? []).map { item in
-            var map: [NSPasteboard.PasteboardType: Data] = [:]
-            for type in item.types {
-                if let data = item.data(forType: type) {
-                    map[type] = data
-                }
-            }
-            return map
-        }
-
-        return ClipboardSnapshot(items: serialized)
+        ClipboardSnapshot(string: readString())
     }
 
     static func restore(_ snapshot: ClipboardSnapshot) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-
-        let items = snapshot.items.map { dataMap -> NSPasteboardItem in
-            let item = NSPasteboardItem()
-            for (type, data) in dataMap {
-                item.setData(data, forType: type)
-            }
-            return item
-        }
-
-        if !items.isEmpty {
-            pasteboard.writeObjects(items)
+        if let value = snapshot.string {
+            writeString(value)
         }
     }
 

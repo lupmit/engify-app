@@ -15,6 +15,8 @@ enum RewriteError: Error {
 }
 
 struct TextRewriteCoordinator {
+    private static let maxInputCharacters = 500
+
     let client: AIRewriteClient
 
     func rewriteCurrentlySelectedText() async -> Result<String, RewriteError> {
@@ -42,12 +44,17 @@ struct TextRewriteCoordinator {
             ClipboardService.restore(snapshot)
             return .success("")
         }
-        EngifyLogger.debug("[Engify][Flow] Got selection (length: \(text.count)): \(text.prefix(80))")
+        let limitedText = String(text.prefix(Self.maxInputCharacters))
+        if text.count > Self.maxInputCharacters {
+            EngifyLogger.debug("[Engify][Flow] Input truncated from \(text.count) to \(Self.maxInputCharacters) characters")
+        } else {
+            EngifyLogger.debug("[Engify][Flow] Got selection (length: \(text.count))")
+        }
 
         do {
             EngifyLogger.debug("[Engify][Flow] Calling AI API...")
-            let rewritten = try await client.rewrite(text)
-            EngifyLogger.debug("[Engify][Flow] API response (length: \(rewritten.count)): \(rewritten.prefix(80))")
+            let rewritten = try await client.rewrite(limitedText)
+            EngifyLogger.debug("[Engify][Flow] API response length: \(rewritten.count)")
             ClipboardService.writeString(rewritten)
             EngifyLogger.debug("[Engify][Flow] Sending Cmd+V")
             AccessibilityService.simulatePaste()
