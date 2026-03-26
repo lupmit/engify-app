@@ -98,9 +98,8 @@ enum UpdateService {
         let script = """
         #!/bin/zsh
         sleep 1.5
-        xattr -cr \(shellEscape(newApp.path))
-        rm -rf \(shellEscape(installPath))
-        cp -R \(shellEscape(newApp.path)) \(shellEscape(installPath))
+        xattr -dr com.apple.quarantine \(shellEscape(newApp.path))
+        ditto \(shellEscape(newApp.path)) \(shellEscape(installPath))
         open \(shellEscape(installPath))
         rm -- "$0"
         """
